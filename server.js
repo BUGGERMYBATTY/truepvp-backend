@@ -4,7 +4,14 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors());
+// --- FIX: Explicit CORS Configuration ---
+// This explicitly tells our backend to trust and accept requests
+// from our live frontend application hosted on Render.
+const corsOptions = {
+  origin: 'https://truepvp-frontend.onrender.com'
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // In-memory player pool. For a larger-scale app, this would be replaced with a database like Redis.
