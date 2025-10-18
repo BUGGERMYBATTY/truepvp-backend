@@ -4,11 +4,17 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- FINAL FIX: Flexible CORS Configuration ---
-// This uses a regular expression to allow any subdomain from onrender.com,
-// which is more robust and solves subtle cross-origin issues.
+// --- FINAL, ROBUST FIX: Dynamic CORS Configuration ---
+// This checks the origin of every request and explicitly allows our frontend.
+const allowedOrigins = ['https://truepvp-frontend.onrender.com'];
 const corsOptions = {
-  origin: /https:\/\/.*\.onrender\.com/
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
 };
 
 app.use(cors(corsOptions));
