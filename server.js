@@ -19,26 +19,17 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- NEW: Health Check Endpoint ---
-// This allows us to visit the backend URL directly to see if it's online.
-app.get('/', (req, res) => {
-  res.status(200).json({ message: 'TRUEPVP.io backend is online and reachable!' });
-});
-
 // In-memory player pool.
 const playerPool = new Map();
 const matchedPlayers = new Map();
 
-// Endpoint for a player to join the matchmaking pool
 app.post('/api/matchmaking/join', (req, res) => {
     const { gameId, betAmount, walletAddress } = req.body;
     if (!gameId || !betAmount || !walletAddress) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
-
     const matchKey = `${gameId}-${betAmount}`;
     const waitingPlayer = playerPool.get(matchKey);
-
     if (waitingPlayer && waitingPlayer.walletAddress !== walletAddress) {
         console.log(`[MATCH] ${walletAddress} vs ${waitingPlayer.walletAddress} for ${matchKey}`);
         matchedPlayers.set(walletAddress, waitingPlayer.walletAddress);
@@ -52,7 +43,6 @@ app.post('/api/matchmaking/join', (req, res) => {
     }
 });
 
-// Endpoint for a player to check their match status
 app.get('/api/matchmaking/status/:matchKey/:walletAddress', (req, res) => {
     const { walletAddress } = req.params;
     if (matchedPlayers.has(walletAddress)) {
@@ -63,12 +53,10 @@ app.get('/api/matchmaking/status/:matchKey/:walletAddress', (req, res) => {
     }
 });
 
-// Endpoint to cancel a matchmaking search
 app.post('/api/matchmaking/cancel', (req, res) => {
     const { gameId, betAmount, walletAddress } = req.body;
     const matchKey = `${gameId}-${betAmount}`;
     const waitingPlayer = playerPool.get(matchKey);
-
     if (waitingPlayer && waitingPlayer.walletAddress === walletAddress) {
         playerPool.delete(matchKey);
         console.log(`[CANCEL] ${walletAddress} removed from pool for ${matchKey}`);
