@@ -4,11 +4,26 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- FINAL TEST: Open CORS Policy ---
-// This allows requests from ANY origin. It's for debugging only.
-// If this works, it confirms the issue is 100% CORS.
-app.use(cors());
+// --- FINAL, ROBUST FIX: Dynamic CORS Configuration ---
+const allowedOrigins = ['https://truepvp-frontend.onrender.com'];
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Request from origin ' + origin + ' not allowed by CORS'));
+    }
+  }
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// --- NEW: Health Check Endpoint ---
+// This allows us to visit the backend URL directly to see if it's online.
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'TRUEPVP.io backend is online and reachable!' });
+});
 
 // In-memory player pool.
 const playerPool = new Map();
@@ -25,18 +40,12 @@ app.post('/api/matchmaking/join', (req, res) => {
     const waitingPlayer = playerPool.get(matchKey);
 
     if (waitingPlayer && waitingPlayer.walletAddress !== walletAddress) {
-        // Match found!
         console.log(`[MATCH] ${walletAddress} vs ${waitingPlayer.walletAddress} for ${matchKey}`);
-        
         matchedPlayers.set(walletAddress, waitingPlayer.walletAddress);
         matchedPlayers.set(waitingPlayer.walletAddress, walletAddress);
-
         playerPool.delete(matchKey);
-        
         res.json({ matched: true, opponent: waitingPlayer.walletAddress });
-
     } else {
-        // No match, add player to the pool
         console.log(`[QUEUE] ${walletAddress} is waiting for a match for ${matchKey}`);
         playerPool.set(matchKey, { walletAddress, timestamp: Date.now() });
         res.json({ matched: false });
@@ -46,7 +55,6 @@ app.post('/api/matchmaking/join', (req, res) => {
 // Endpoint for a player to check their match status
 app.get('/api/matchmaking/status/:matchKey/:walletAddress', (req, res) => {
     const { walletAddress } = req.params;
-
     if (matchedPlayers.has(walletAddress)) {
         matchedPlayers.delete(walletAddress);
         res.json({ status: 'matched' });
@@ -71,5 +79,5 @@ app.post('/api/matchmaking/cancel', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Matchmaking server listening on port ${PORT}`);
+    console.log(`Matchmaking server listening on http://localhost:${PORT}`);
 });
