@@ -90,13 +90,14 @@ wss.on('connection', (ws, req) => {
             if (data.type === 'join_game') {
                 gameId = data.gameId;
                 playerWallet = data.walletAddress;
+                // NICKNAME FIX: Receive nickname from player
+                const nickname = data.nickname || nicknameFor(playerWallet);
 
                 if (!activeGames.has(gameId)) {
-                    // BUG FIX: Round numbers must be between 1 and 5.
                     const shuffledNumbers = [1, 2, 3, 4, 5].sort(() => 0.5 - Math.random());
                     const gameState = {
                         gameId: gameId,
-                        players: [{ walletAddress: playerWallet, score: 0, nuggets: [1, 2, 3, 4, 5], choice: null, ws: ws }],
+                        players: [{ walletAddress: playerWallet, nickname: nickname, score: 0, nuggets: [1, 2, 3, 4, 5], choice: null, ws: ws }],
                         round: 0,
                         availableRoundNumbers: shuffledNumbers,
                         roundNumber: null,
@@ -104,12 +105,12 @@ wss.on('connection', (ws, req) => {
                         gameOver: false,
                     };
                     activeGames.set(gameId, gameState);
-                    console.log(`[GAME] Game ${gameId} created by ${playerWallet}`);
+                    console.log(`[GAME] Game ${gameId} created by ${playerWallet} (${nickname})`);
                 } else {
                     const gameState = activeGames.get(gameId);
                     if (gameState.players.length < 2 && !gameState.players.find(p => p.walletAddress === playerWallet)) {
-                        gameState.players.push({ walletAddress: playerWallet, score: 0, nuggets: [1, 2, 3, 4, 5], choice: null, ws: ws });
-                        console.log(`[GAME] Player ${playerWallet} joined game ${gameId}`);
+                        gameState.players.push({ walletAddress: playerWallet, nickname: nickname, score: 0, nuggets: [1, 2, 3, 4, 5], choice: null, ws: ws });
+                        console.log(`[GAME] Player ${playerWallet} (${nickname}) joined game ${gameId}`);
                         startRound(gameId);
                     }
                 }
@@ -164,15 +165,16 @@ function broadcastGameState(gameId) {
                 gameOver: gameState.gameOver,
                 you: {
                     walletAddress: player.walletAddress,
+                    nickname: player.nickname, // NICKNAME FIX: Send nickname
                     score: player.score,
                     nuggets: player.nuggets,
                     choice: player.choice,
                 },
                 opponent: opponent ? {
                     walletAddress: opponent.walletAddress,
+                    nickname: opponent.nickname, // NICKNAME FIX: Send nickname
                     score: opponent.score,
                     nuggets: opponent.nuggets,
-                    // BUG FIX: Only reveal opponent's choice if both players have chosen.
                     choice: bothPlayersMadeChoice ? opponent.choice : null,
                 } : null,
             };
@@ -208,8 +210,7 @@ function processRound(gameId) {
         if (roundWinner) {
             const points = roundValue + p1.choice + p2.choice;
             roundWinner.score += points;
-            const winnerName = nicknameFor(roundWinner.walletAddress);
-            gameState.roundMessage = `${winnerName} wins ${points} points!`;
+            gameState.roundMessage = `${roundWinner.nickname} wins ${points} points!`;
         } else {
             gameState.roundMessage = "It's a draw!";
         }
@@ -220,20 +221,18 @@ function processRound(gameId) {
                 let winner = null;
                 if (p1.score > p2.score) winner = p1;
                 if (p2.score > p1.score) winner = p2;
-                const winnerName = winner ? nicknameFor(winner.walletAddress) : null;
-                gameState.roundMessage = winnerName ? `Game Over! Winner is ${winnerName}` : 'Game Over! It is a draw!';
+                gameState.roundMessage = winner ? `Game Over! Winner is ${winner.nickname}` : 'Game Over! It is a draw!';
                 gameState.gameOver = true;
                 broadcastGameState(gameId);
                 setTimeout(() => activeGames.delete(gameId), 1000);
             } else {
                 startRound(gameId);
             }
-        }, 2000); // Wait 2 seconds before showing result/next round
-    }, 1500); // Wait 1.5 seconds to show choices
+        }, 2000); 
+    }, 1500);
 }
 
 function nicknameFor(address) {
-    // This is a placeholder. In a real app, you'd look up the nickname.
     if (address && address.startsWith('GUEST_')) return 'Guest';
     if (address) return `${address.substring(0, 4)}...${address.substring(address.length - 4)}`;
     return 'Opponent';
