@@ -4,22 +4,10 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- FINAL, ROBUST FIX: Dynamic CORS Configuration ---
-// This checks the origin of every request and explicitly allows our frontend.
-const allowedOrigins = ['https://truepvp-frontend.onrender.com'];
-const corsOptions = {
-  origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  }
-};
-
-app.use(cors(corsOptions));
+// --- FINAL TEST: Open CORS Policy ---
+// This allows requests from ANY origin. It's for debugging only.
+// If this works, it confirms the issue is 100% CORS.
+app.use(cors());
 app.use(express.json());
 
 // In-memory player pool.
