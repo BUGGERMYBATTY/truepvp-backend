@@ -33,12 +33,16 @@ app.post('/api/matchmaking/join', (req, res) => {
     if (!gameId || !betAmount || !walletAddress) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
-    const matchKey = `${gameId}-${betAmount}`;
+
+    // *** POOL SEPARATION LOGIC ***
+    const playerType = walletAddress.startsWith('GUEST_') ? 'guest' : 'phantom';
+    const matchKey = `${gameId}-${betAmount}-${playerType}`;
+
     const waitingPlayer = playerPool.get(matchKey);
 
     if (waitingPlayer && waitingPlayer.walletAddress !== walletAddress) {
         const gameInstanceId = uuidv4();
-        console.log(`[MATCH] ${walletAddress} vs ${waitingPlayer.walletAddress} in game ${gameInstanceId}`);
+        console.log(`[MATCH] ${walletAddress} vs ${waitingPlayer.walletAddress} in game ${gameInstanceId} [Pool: ${playerType}]`);
         matchedPairs.set(walletAddress, { opponent: waitingPlayer.walletAddress, gameId: gameInstanceId });
         matchedPairs.set(waitingPlayer.walletAddress, { opponent: walletAddress, gameId: gameInstanceId });
         playerPool.delete(matchKey);
@@ -63,15 +67,23 @@ app.get('/api/matchmaking/status/:walletAddress', (req, res) => {
 });
 
 app.post('/api/matchmaking/cancel', (req, res) => {
-    const { walletAddress } = req.body;
-    for (const [key, player] of playerPool.entries()) {
-        if (player.walletAddress === walletAddress) {
-            playerPool.delete(key);
-            console.log(`[CANCEL] ${walletAddress} removed from pool.`);
-            break;
-        }
+    const { gameId, betAmount, walletAddress } = req.body;
+     if (!gameId || !betAmount || !walletAddress) {
+        return res.status(400).json({ error: 'Missing required fields for cancel' });
     }
-    res.status(200).json({ message: 'Search cancelled' });
+    // *** POOL SEPARATION LOGIC (must also be applied here) ***
+    const playerType = walletAddress.startsWith('GUEST_') ? 'guest' : 'phantom';
+    const matchKey = `${gameId}-${betAmount}-${playerType}`;
+
+    const waitingPlayer = playerPool.get(matchKey);
+
+    if (waitingPlayer && waitingPlayer.walletAddress === walletAddress) {
+        playerPool.delete(matchKey);
+        console.log(`[CANCEL] ${walletAddress} removed from pool for ${matchKey}.`);
+        res.status(200).json({ message: 'Search cancelled' });
+    } else {
+        res.status(200).json({ message: 'Player not found in queue' });
+    }
 });
 
 
@@ -90,7 +102,6 @@ wss.on('connection', (ws, req) => {
             if (data.type === 'join_game') {
                 gameId = data.gameId;
                 playerWallet = data.walletAddress;
-                // NICKNAME FIX: Receive nickname from player
                 const nickname = data.nickname || nicknameFor(playerWallet);
 
                 if (!activeGames.has(gameId)) {
@@ -165,14 +176,14 @@ function broadcastGameState(gameId) {
                 gameOver: gameState.gameOver,
                 you: {
                     walletAddress: player.walletAddress,
-                    nickname: player.nickname, // NICKNAME FIX: Send nickname
+                    nickname: player.nickname,
                     score: player.score,
                     nuggets: player.nuggets,
                     choice: player.choice,
                 },
                 opponent: opponent ? {
                     walletAddress: opponent.walletAddress,
-                    nickname: opponent.nickname, // NICKNAME FIX: Send nickname
+                    nickname: opponent.nickname,
                     score: opponent.score,
                     nuggets: opponent.nuggets,
                     choice: bothPlayersMadeChoice ? opponent.choice : null,
