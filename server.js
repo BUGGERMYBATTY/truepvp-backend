@@ -33,16 +33,12 @@ app.post('/api/matchmaking/join', (req, res) => {
     if (!gameId || !betAmount || !walletAddress) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
-
-    // *** POOL SEPARATION LOGIC ***
-    const playerType = walletAddress.startsWith('GUEST_') ? 'guest' : 'phantom';
-    const matchKey = `${gameId}-${betAmount}-${playerType}`;
-
+    const matchKey = `${gameId}-${betAmount}`;
     const waitingPlayer = playerPool.get(matchKey);
 
     if (waitingPlayer && waitingPlayer.walletAddress !== walletAddress) {
         const gameInstanceId = uuidv4();
-        console.log(`[MATCH] ${walletAddress} vs ${waitingPlayer.walletAddress} in game ${gameInstanceId} [Pool: ${playerType}]`);
+        console.log(`[MATCH] ${walletAddress} vs ${waitingPlayer.walletAddress} in game ${gameInstanceId}`);
         matchedPairs.set(walletAddress, { opponent: waitingPlayer.walletAddress, gameId: gameInstanceId });
         matchedPairs.set(waitingPlayer.walletAddress, { opponent: walletAddress, gameId: gameInstanceId });
         playerPool.delete(matchKey);
@@ -67,91 +63,84 @@ app.get('/api/matchmaking/status/:walletAddress', (req, res) => {
 });
 
 app.post('/api/matchmaking/cancel', (req, res) => {
-    const { gameId, betAmount, walletAddress } = req.body;
-     if (!gameId || !betAmount || !walletAddress) {
-        return res.status(400).json({ error: 'Missing required fields for cancel' });
+    // Simplified: Find and remove player from any pool they are in.
+    const { walletAddress } = req.body;
+    for (const [key, player] of playerPool.entries()) {
+        if (player.walletAddress === walletAddress) {
+            playerPool.delete(key);
+            console.log(`[CANCEL] ${walletAddress} removed from pool.`);
+            break;
+        }
     }
-    // *** POOL SEPARATION LOGIC (must also be applied here) ***
-    const playerType = walletAddress.startsWith('GUEST_') ? 'guest' : 'phantom';
-    const matchKey = `${gameId}-${betAmount}-${playerType}`;
-
-    const waitingPlayer = playerPool.get(matchKey);
-
-    if (waitingPlayer && waitingPlayer.walletAddress === walletAddress) {
-        playerPool.delete(matchKey);
-        console.log(`[CANCEL] ${walletAddress} removed from pool for ${matchKey}.`);
-        res.status(200).json({ message: 'Search cancelled' });
-    } else {
-        res.status(200).json({ message: 'Player not found in queue' });
-    }
+    res.status(200).json({ message: 'Search cancelled' });
 });
 
 
 // --- WebSocket Server Setup (Live Gameplay) ---
 const activeGames = new Map();
 
-wss.on('connection', (ws, req) => {
+wss.on('connection', (ws) => {
     console.log('[WS] Client connected');
     let gameId;
     let playerWallet;
 
     ws.on('message', (message) => {
-        try {
-            const data = JSON.parse(message);
-            
-            if (data.type === 'join_game') {
-                gameId = data.gameId;
-                playerWallet = data.walletAddress;
-                const nickname = data.nickname || nicknameFor(playerWallet);
+        const data = JSON.parse(message);
+        
+        if (data.type === 'join_game') {
+            gameId = data.gameId;
+            playerWallet = data.walletAddress;
 
-                if (!activeGames.has(gameId)) {
-                    const shuffledNumbers = [1, 2, 3, 4, 5].sort(() => 0.5 - Math.random());
-                    const gameState = {
-                        gameId: gameId,
-                        players: [{ walletAddress: playerWallet, nickname: nickname, score: 0, nuggets: [1, 2, 3, 4, 5], choice: null, ws: ws }],
-                        round: 0,
-                        availableRoundNumbers: shuffledNumbers,
-                        roundNumber: null,
-                        roundMessage: 'Waiting for opponent...',
-                        gameOver: false,
-                    };
-                    activeGames.set(gameId, gameState);
-                    console.log(`[GAME] Game ${gameId} created by ${playerWallet} (${nickname})`);
-                } else {
-                    const gameState = activeGames.get(gameId);
-                    if (gameState.players.length < 2 && !gameState.players.find(p => p.walletAddress === playerWallet)) {
-                        gameState.players.push({ walletAddress: playerWallet, nickname: nickname, score: 0, nuggets: [1, 2, 3, 4, 5], choice: null, ws: ws });
-                        console.log(`[GAME] Player ${playerWallet} (${nickname}) joined game ${gameId}`);
-                        startRound(gameId);
-                    }
-                }
-            }
-
-            if (data.type === 'play_choice') {
+            if (!activeGames.has(gameId)) {
+                // First player joins, create the game state
+                const shuffledNumbers = [1, 2, 3, 4, 5].sort(() => 0.5 - Math.random());
+                const gameState = {
+                    gameId: gameId,
+                    players: [{ walletAddress: playerWallet, score: 0, nuggets: [1, 2, 3, 4, 5], choice: null, ws: ws }],
+                    round: 0,
+                    availableRoundNumbers: shuffledNumbers,
+                    roundNumber: null,
+                    roundMessage: 'Waiting for opponent...',
+                    isPlayer1Turn: true,
+                    gameOver: false,
+                };
+                activeGames.set(gameId, gameState);
+                console.log(`[GAME] Game ${gameId} created by ${playerWallet}`);
+            } else {
+                // Second player joins
                 const gameState = activeGames.get(gameId);
-                if (!gameState) return;
-                
-                const playerIndex = gameState.players.findIndex(p => p.walletAddress === playerWallet);
-                if (playerIndex !== -1 && gameState.players[playerIndex].choice === null) {
-                    gameState.players[playerIndex].choice = data.choice;
-                    gameState.players[playerIndex].nuggets = gameState.players[playerIndex].nuggets.filter(n => n !== data.choice);
-                    console.log(`[GAME] Player ${playerWallet} chose ${data.choice} in game ${gameId}`);
-
-                    if (gameState.players.every(p => p.choice !== null)) {
-                        processRound(gameId);
-                    } else {
-                         gameState.roundMessage = "Opponent is thinking...";
-                         broadcastGameState(gameId);
-                    }
+                if (gameState.players.length < 2) {
+                    gameState.players.push({ walletAddress: playerWallet, score: 0, nuggets: [1, 2, 3, 4, 5], choice: null, ws: ws });
+                    console.log(`[GAME] Player ${playerWallet} joined game ${gameId}`);
+                    startRound(gameId);
                 }
             }
-        } catch (e) {
-            console.error('[WS] Error processing message:', e);
+        }
+
+        if (data.type === 'play_choice') {
+            const gameState = activeGames.get(gameId);
+            if (!gameState) return;
+            
+            const playerIndex = gameState.players.findIndex(p => p.walletAddress === playerWallet);
+            if (playerIndex !== -1 && gameState.players[playerIndex].choice === null) {
+                gameState.players[playerIndex].choice = data.choice;
+                gameState.players[playerIndex].nuggets = gameState.players[playerIndex].nuggets.filter(n => n !== data.choice);
+                console.log(`[GAME] Player ${playerWallet} chose ${data.choice} in game ${gameId}`);
+
+                // Check if both players have made a choice
+                if (gameState.players.every(p => p.choice !== null)) {
+                    processRound(gameId);
+                } else {
+                     gameState.roundMessage = "Opponent is thinking...";
+                     broadcastGameState(gameId);
+                }
+            }
         }
     });
 
     ws.on('close', () => {
         console.log(`[WS] Client ${playerWallet} disconnected`);
+        // Handle disconnects/forfeits if needed
         if (gameId && activeGames.has(gameId)) {
              activeGames.delete(gameId);
              console.log(`[GAME] Game ${gameId} terminated due to disconnect.`);
@@ -167,6 +156,7 @@ function broadcastGameState(gameId) {
 
     gameState.players.forEach(player => {
         if (player.ws.readyState === WebSocket.OPEN) {
+            // Send tailored state to each player
             const opponent = gameState.players.find(p => p.walletAddress !== player.walletAddress);
             const stateForPlayer = {
                 gameId: gameState.gameId,
@@ -176,16 +166,15 @@ function broadcastGameState(gameId) {
                 gameOver: gameState.gameOver,
                 you: {
                     walletAddress: player.walletAddress,
-                    nickname: player.nickname,
                     score: player.score,
                     nuggets: player.nuggets,
                     choice: player.choice,
                 },
                 opponent: opponent ? {
                     walletAddress: opponent.walletAddress,
-                    nickname: opponent.nickname,
                     score: opponent.score,
                     nuggets: opponent.nuggets,
+                    // Only reveal opponent's choice if both players have chosen.
                     choice: bothPlayersMadeChoice ? opponent.choice : null,
                 } : null,
             };
@@ -196,7 +185,6 @@ function broadcastGameState(gameId) {
 
 function startRound(gameId) {
     const gameState = activeGames.get(gameId);
-    if (!gameState || gameState.players.length < 2) return;
     gameState.round++;
     gameState.roundNumber = gameState.availableRoundNumbers[gameState.round - 1];
     gameState.players.forEach(p => p.choice = null);
@@ -207,7 +195,6 @@ function startRound(gameId) {
 
 function processRound(gameId) {
     const gameState = activeGames.get(gameId);
-    if (!gameState) return;
     const [p1, p2] = gameState.players;
     const roundValue = gameState.roundNumber;
 
@@ -221,33 +208,43 @@ function processRound(gameId) {
         if (roundWinner) {
             const points = roundValue + p1.choice + p2.choice;
             roundWinner.score += points;
-            gameState.roundMessage = `${roundWinner.nickname} wins ${points} points!`;
+            const winnerName = nicknameFor(roundWinner.walletAddress);
+            gameState.roundMessage = `${winnerName} wins ${points} points!`;
         } else {
             gameState.roundMessage = "It's a draw!";
         }
+
         broadcastGameState(gameId);
 
         setTimeout(() => {
             if (gameState.round >= 5) {
+                // Game over
                 let winner = null;
                 if (p1.score > p2.score) winner = p1;
                 if (p2.score > p1.score) winner = p2;
-                gameState.roundMessage = winner ? `Game Over! Winner is ${winner.nickname}` : 'Game Over! It is a draw!';
+                const winnerName = winner ? nicknameFor(winner.walletAddress) : null;
+                gameState.roundMessage = winnerName ? `Game Over! Winner is ${winnerName}` : 'Game Over! It is a draw!';
                 gameState.gameOver = true;
                 broadcastGameState(gameId);
-                setTimeout(() => activeGames.delete(gameId), 1000);
+                activeGames.delete(gameId);
             } else {
                 startRound(gameId);
             }
-        }, 2000); 
+        }, 3000);
     }, 1500);
 }
 
+// Helper function to get a display name for a wallet address
 function nicknameFor(address) {
-    if (address && address.startsWith('GUEST_')) return 'Guest';
-    if (address) return `${address.substring(0, 4)}...${address.substring(address.length - 4)}`;
+    if (address && address.startsWith('GUEST_')) {
+        return 'Guest';
+    }
+    if (address) {
+        return `${address.substring(0, 4)}...${address.substring(address.length - 4)}`;
+    }
     return 'Opponent';
 }
+
 
 server.listen(PORT, () => {
     console.log(`Server is live on http://localhost:${PORT}`);
