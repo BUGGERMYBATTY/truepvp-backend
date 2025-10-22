@@ -117,32 +117,3 @@ class MatchmakingQueue {
 
 const matchmaking = new MatchmakingQueue();
 module.exports = { matchmaking };
-```
-
-4. Commit message: `Add matchmaking service`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js
-├── middleware/
-│   ├── rateLimit.js
-│   └── security.js
-├── services/
-│   ├── matchmaking.js          ← NEW FILE (2 of 2)
-│   └── transactionVerifier.js
-├── state/
-│   └── gameState.js
-├── utils/
-│   ├── cleanup.js
-│   └── validation.js
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
