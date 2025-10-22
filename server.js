@@ -162,19 +162,3 @@ process.on('SIGINT', () => {
 });
 
 module.exports = { app, server, wss };
-```
-
-4. Commit message: `Add main server file`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js  ← NEW
