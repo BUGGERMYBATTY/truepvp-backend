@@ -88,31 +88,3 @@ class SolanaTransactionVerifier {
 
 const txVerifier = new SolanaTransactionVerifier();
 module.exports = { txVerifier };
-```
-
-4. Commit message: `Add transaction verification service`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js
-├── middleware/
-│   ├── rateLimit.js
-│   └── security.js
-├── services/
-│   └── transactionVerifier.js  ← NEW FILE (1 of 2)
-├── state/
-│   └── gameState.js
-├── utils/
-│   ├── cleanup.js
-│   └── validation.js
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
