@@ -84,21 +84,3 @@ module.exports = {
   // Admin
   ADMIN_API_KEY: process.env.ADMIN_API_KEY || 'dev-api-key-change-in-production'
 };
-```
-
-4. Commit message: `Add configuration file`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js  ← NEW FOLDER & FILE
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
