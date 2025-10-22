@@ -59,23 +59,3 @@ module.exports = {
   // Stats
   statistics
 };
-```
-
-4. Commit message: `Add game state management`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js
-├── state/
-│   └── gameState.js  ← NEW FOLDER & FILE
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
