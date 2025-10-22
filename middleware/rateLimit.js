@@ -31,26 +31,3 @@ function rateLimitMiddleware(req, res, next) {
 }
 
 module.exports = { rateLimitMiddleware };
-```
-
-4. Commit message: `Add rate limit middleware`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js
-├── middleware/
-│   ├── rateLimit.js  ← NEW FILE (2 of 2)
-│   └── security.js
-├── state/
-│   └── gameState.js
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
