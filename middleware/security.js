@@ -140,25 +140,3 @@ module.exports = {
   banIP,
   clearFailedAttempts
 };
-```
-
-4. Commit message: `Add security middleware`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js
-├── middleware/
-│   └── security.js  ← NEW FILE (1 of 2)
-├── state/
-│   └── gameState.js
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
