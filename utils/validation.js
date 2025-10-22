@@ -81,28 +81,3 @@ class InputValidator {
 }
 
 module.exports = { InputValidator };
-```
-
-4. Commit message: `Add input validation utilities`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js
-├── middleware/
-│   ├── rateLimit.js
-│   └── security.js
-├── state/
-│   └── gameState.js
-├── utils/
-│   └── validation.js  ← NEW FILE (1 of 2)
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
