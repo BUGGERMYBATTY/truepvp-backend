@@ -15,35 +15,3 @@ router.get('/result/:gameId', (req, res) => {
 });
 
 module.exports = router;
-```
-
-4. Commit message: `Add game routes`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js
-├── middleware/
-│   ├── rateLimit.js
-│   └── security.js
-├── routes/
-│   ├── game.js         ← NEW FILE (2 of 3)
-│   └── matchmaking.js
-├── services/
-│   ├── matchmaking.js
-│   └── transactionVerifier.js
-├── state/
-│   └── gameState.js
-├── utils/
-│   ├── cleanup.js
-│   └── validation.js
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
