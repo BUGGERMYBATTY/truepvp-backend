@@ -34,18 +34,3 @@
     "npm": ">=9.0.0"
   }
 }
-```
-
-5. Scroll down to "Commit changes"
-6. Commit message: `Add package.json`
-7. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should see:
-```
-truepvp-backend/
-├── .gitignore
-└── package.json  ← NEW
