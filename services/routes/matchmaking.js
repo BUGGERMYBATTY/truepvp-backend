@@ -64,34 +64,3 @@ router.post('/cancel', (req, res) => {
 });
 
 module.exports = router;
-```
-
-4. Commit message: `Add matchmaking routes`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js
-├── middleware/
-│   ├── rateLimit.js
-│   └── security.js
-├── routes/
-│   └── matchmaking.js  ← NEW FILE (1 of 3)
-├── services/
-│   ├── matchmaking.js
-│   └── transactionVerifier.js
-├── state/
-│   └── gameState.js
-├── utils/
-│   ├── cleanup.js
-│   └── validation.js
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
