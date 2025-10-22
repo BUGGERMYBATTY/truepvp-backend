@@ -50,29 +50,3 @@ function startCleanupRoutines() {
 }
 
 module.exports = { startCleanupRoutines };
-```
-
-4. Commit message: `Add cleanup utilities`
-5. Click **"Commit changes"**
-
----
-
-## 🎯 After You Finish
-
-You should now see:
-```
-truepvp-backend/
-├── config/
-│   └── index.js
-├── middleware/
-│   ├── rateLimit.js
-│   └── security.js
-├── state/
-│   └── gameState.js
-├── utils/
-│   ├── cleanup.js     ← NEW FILE (2 of 2)
-│   └── validation.js
-├── .gitignore
-├── .env.example
-├── package.json
-└── server.js
